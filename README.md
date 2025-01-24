@@ -77,6 +77,8 @@ The scene will be set up based on `dialog_show.txt` and `dialog_text.txt`.
 | PageDown | Speed down the audio playback rate. |
 | Home | Reset the audio playback rate.|  
 
+- Some scenes require ignoring blend-mode specified by slots.
+
 ## Scene preferences
 
 The following preferences can be configured through `setting.txt` in the same directory of the executable file.
@@ -91,4 +93,5 @@ The following preferences can be configured through `setting.txt` in the same di
 ## Build
 
 1. Run `deps/CMakeLists.txt` to obtain the external libraries stated above. 
-2. Open `RebgilPlayer.sln` with Visual Studio 2022 and then select `Build Solution` on menu items.
+2. Open `RebgilPlayer.sln` with Visual Studio 2022.
+3. Select `Build Solution` on menu items.
