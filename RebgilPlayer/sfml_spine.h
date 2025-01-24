@@ -37,11 +37,6 @@ private:
 	mutable spine::Vector<spine::String> m_leaveOutList;
 	bool IsToBeLeftOut(const spine::String &slotName) const;
 	bool (*pLeaveOutCallback)(const char*, size_t) = nullptr;
-
-	sf::BlendMode m_sfmlBlendModeNormalPma;
-	sf::BlendMode m_sfmlBlendModeAddPma;
-	sf::BlendMode m_sfmlBlendModeScreen;
-	sf::BlendMode m_sfmlBlendModeMultiply;
 };
 
 class CSfmlTextureLoader : public spine::TextureLoader

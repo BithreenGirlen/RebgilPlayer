@@ -11,6 +11,19 @@ namespace spine
 	}
 }
 
+static sf::BlendMode g_sfmlBlendModeNormalPma = sf::BlendMode(sf::BlendMode::One, sf::BlendMode::OneMinusSrcAlpha);
+static sf::BlendMode g_sfmlBlendModeAddPma = sf::BlendMode(sf::BlendMode::One, sf::BlendMode::One);
+static sf::BlendMode g_sfmlBlendModeScreen = sf::BlendMode(sf::BlendMode::One, sf::BlendMode::OneMinusSrcColor);
+static sf::BlendMode g_sfmlBlendModeMultiply = sf::BlendMode
+(
+	sf::BlendMode::Factor::DstColor,
+	sf::BlendMode::Factor::OneMinusSrcAlpha,
+	sf::BlendMode::Equation::Add,
+	sf::BlendMode::Factor::Zero,
+	sf::BlendMode::Factor::One,
+	sf::BlendMode::Equation::Add
+);
+
 CSfmlSpineDrawer::CSfmlSpineDrawer(spine::SkeletonData* pSkeletonData, spine::AnimationStateData* pAnimationStateData)
 {
 	spine::Bone::setYDown(true);
@@ -34,19 +47,6 @@ CSfmlSpineDrawer::CSfmlSpineDrawer(spine::SkeletonData* pSkeletonData, spine::An
 	m_quadIndices.add(2);
 	m_quadIndices.add(3);
 	m_quadIndices.add(0);
-
-	m_sfmlBlendModeNormalPma = sf::BlendMode(sf::BlendMode::One, sf::BlendMode::OneMinusSrcAlpha);
-	m_sfmlBlendModeAddPma = sf::BlendMode(sf::BlendMode::One, sf::BlendMode::One);
-	m_sfmlBlendModeScreen = sf::BlendMode(sf::BlendMode::One, sf::BlendMode::OneMinusSrcColor);
-	m_sfmlBlendModeMultiply = sf::BlendMode
-	(
-		sf::BlendMode::Factor::DstColor,
-		sf::BlendMode::Factor::OneMinusSrcAlpha,
-		sf::BlendMode::Equation::Add,
-		sf::BlendMode::Factor::Zero,
-		sf::BlendMode::Factor::One,
-		sf::BlendMode::Equation::Add
-	);
 }
 
 CSfmlSpineDrawer::~CSfmlSpineDrawer()
@@ -90,7 +90,7 @@ void CSfmlSpineDrawer::draw(sf::RenderTarget& renderTarget, sf::RenderStates ren
 		spine::Slot& slot = *skeleton->getDrawOrder()[i];
 		spine::Attachment* pAttachment = slot.getAttachment();
 
-		if (pAttachment == nullptr || slot.getColor().a == 0 || !slot.getBone().isActive())
+		if (pAttachment == nullptr || ((slot.getColor().a == 0 || !slot.getBone().isActive()) && pAttachment->getRTTI().isExactly(spine::ClippingAttachment::rtti)))
 		{
 			m_clipper.clipEnd(slot);
 			continue;
@@ -217,16 +217,16 @@ void CSfmlSpineDrawer::draw(sf::RenderTarget& renderTarget, sf::RenderStates ren
 		switch (spineBlnedMode)
 		{
 		case spine::BlendMode_Additive:
-			sfmlBlendMode = m_bAlphaPremultiplied ? m_sfmlBlendModeAddPma : sf::BlendAdd;
+			sfmlBlendMode = m_bAlphaPremultiplied ? g_sfmlBlendModeAddPma : sf::BlendAdd;
 			break;
 		case spine::BlendMode_Multiply:
-			sfmlBlendMode = m_sfmlBlendModeMultiply;
+			sfmlBlendMode = g_sfmlBlendModeMultiply;
 			break;
 		case spine::BlendMode_Screen:
-			sfmlBlendMode = m_sfmlBlendModeScreen;
+			sfmlBlendMode = g_sfmlBlendModeScreen;
 			break;
 		default:
-			sfmlBlendMode = m_bAlphaPremultiplied ? m_sfmlBlendModeNormalPma : sf::BlendAlpha;
+			sfmlBlendMode = m_bAlphaPremultiplied ? g_sfmlBlendModeNormalPma : sf::BlendAlpha;
 			break;
 		}
 
