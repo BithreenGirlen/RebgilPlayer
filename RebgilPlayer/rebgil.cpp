@@ -13,38 +13,16 @@ namespace rebgil
 {
 	struct SPlayerSetting
 	{
-		std::wstring wstrAtlasExtension;
-		std::wstring wstrSkelExtension;
-		std::wstring wstrVoiceExtension;
-		std::wstring wstrSceneTextExtension;
-		std::string strFontFilePath;
+		std::wstring wstrAtlasExtension = L".atlas.txt";;
+		std::wstring wstrSkelExtension = L".skel.txt";;
+		std::wstring wstrVoiceExtension = L".m4a";;
+		std::wstring wstrSceneTextExtension = L".txt";;
+		std::string strFontFilePath = "C:\\Windows\\Fonts\\yumindb.ttf";;
 
-		bool bSkelBinary = true;
 		bool bToTranslateText = true;
 	};
 
-	struct SDialogueParams
-	{
-		std::string strTextId;
-
-		std::wstring wstrText;
-		std::wstring wstrVoiceFileName;
-	};
-
 	static SPlayerSetting g_playerSetting;
-
-
-	static void SetupDefaultSetting()
-	{
-		g_playerSetting.wstrAtlasExtension = L"atlas.txt";
-		g_playerSetting.wstrSkelExtension = L"skel.txt";
-		g_playerSetting.wstrVoiceExtension = L".m4a";
-		g_playerSetting.wstrSceneTextExtension = L".txt";
-		g_playerSetting.strFontFilePath = "C:\\Windows\\Fonts\\yumindb.ttf";
-
-		g_playerSetting.bSkelBinary = true;
-		g_playerSetting.bToTranslateText = true;
-	}
 
 	static bool ReadSettingFile(SPlayerSetting &playerSetting)
 	{
@@ -74,10 +52,6 @@ namespace rebgil
 		bRet = json_minimal::GetJsonElementValue(*pp, "sceneText", vBuffer.data(), vBuffer.size());
 		if (!bRet)return false;
 		playerSetting.wstrSceneTextExtension = win_text::WidenUtf8(vBuffer.data());
-
-		bRet = json_minimal::GetJsonElementValue(p, "binarySkel", vBuffer.data(), vBuffer.size());
-		if (!bRet)return false;
-		playerSetting.bSkelBinary = strcmp(vBuffer.data(), "true") == 0;
 
 		bRet = json_minimal::GetJsonElementValue(p, "fontPath", vBuffer.data(), vBuffer.size());
 		if (!bRet)return false;
@@ -174,10 +148,6 @@ bool rebgil::InitialiseSetting()
 	{
 		g_playerSetting = std::move(playerSetting);
 	}
-	else
-	{
-		SetupDefaultSetting();
-	}
 
 	return g_playerSetting.wstrAtlasExtension != g_playerSetting.wstrSkelExtension;
 }
@@ -189,7 +159,18 @@ const std::string& rebgil::GetFontFilePath()
 
 const bool rebgil::IsSkelBinary()
 {
-	return g_playerSetting.bSkelBinary;
+	const wchar_t* wszBinaryCandidates[] =
+	{
+		L".skel", L".bin"
+	};
+	for (size_t i = 0; i < sizeof(wszBinaryCandidates) / sizeof(wszBinaryCandidates[0]); ++i)
+	{
+		if (g_playerSetting.wstrSkelExtension.find(wszBinaryCandidates[i]) != std::wstring::npos)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 /*Spine素材一覧取得*/
 void rebgil::GetSpineList(const std::wstring& wstrFolderPath, std::vector<std::string>& atlasPaths, std::vector<std::string>& skelPaths)
