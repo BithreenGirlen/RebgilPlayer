@@ -345,17 +345,22 @@ bool rebgil::IsSlotToBeLeftOut(const char* szSlotName, size_t nSlotNameLength)
 	const auto IsSensitiveSlot = [&szSlotName, &nSlotNameLength]()
 		-> bool
 		{
-			const std::vector<std::string> sensitiveSlots = { "Anus", "Dick", "dick", "Egg", "egg", "Pussy", "pussy", "Toy" };
-			for (const auto& slotName : sensitiveSlots)
+			const char* szSensitiveSlots[] =
 			{
-				if(strstr(szSlotName, slotName.c_str()) != nullptr)return true;
+				"Anus", "Dick", "dick", "Egg", "egg", "Pussy", "pussy", "Toy", "JJ", "mako", "water"
+			};
+
+			for (size_t i = 0; i < sizeof(szSensitiveSlots) / sizeof(szSensitiveSlots[0]); ++i)
+			{
+				if (strstr(szSlotName, szSensitiveSlots[i]) != nullptr)return true;
 			}
+
 			return false;
 		};
 	const auto IsGeneralMask = [&szSlotName, &nSlotNameLength]()
 		-> bool
 		{
-			return strstr(szSlotName, "M/MM") != nullptr;
+			return strstr(szSlotName, "M/MM") != nullptr || strstr(szSlotName, "mmm") != nullptr;
 		};
 
 	return (IsMaskSlotCandidate() && IsSensitiveSlot()) || IsGeneralMask();
