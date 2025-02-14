@@ -288,16 +288,10 @@ void CSfmlMainWindow::ShiftMessageText(bool bForward)
 /*表示文章変更適用*/
 void CSfmlMainWindow::UpdateMessageText()
 {
-	if (m_textData.empty())return;
+	if (m_nTextIndex >= m_textData.size())return;
 
-	const adv::TextDatum& textDatum = m_textData.at(m_nTextIndex);
+	const adv::TextDatum& textDatum = m_textData[m_nTextIndex];
 	std::wstring wstr = textDatum.wstrText;
-
-	constexpr unsigned int kLineThreashold = 46;
-	for (size_t i = kLineThreashold; i < wstr.size(); i += kLineThreashold)
-	{
-		wstr.insert(i, L"\n");
-	}
 	if (!wstr.empty() && wstr.back() != L'\n') wstr += L"\n ";
 
 	wstr += std::to_wstring(m_nTextIndex + 1) + L"/" + std::to_wstring(m_textData.size());

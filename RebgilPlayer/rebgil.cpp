@@ -78,7 +78,7 @@ namespace rebgil
 		const wchar_t swzLessThan[] = L"&lt;";
 		const wchar_t swzGreaterThan[] = L"&gt;";
 
-		text_utility::ReplaceAll(wstrText, swzLineBreak, L"");
+		text_utility::ReplaceAll(wstrText, swzLineBreak, L"\n");
 
 		for (size_t nRead = 0;;)
 		{
@@ -89,8 +89,7 @@ namespace rebgil
 			if (nEnd == std::wstring::npos)return;
 
 			nEnd += sizeof(swzGreaterThan) / sizeof(wchar_t) - 1;
-			std::wstring wstr = wstrText.substr(nStart, nEnd - nStart);
-			text_utility::ReplaceAll(wstrText, wstr, L"");
+			wstrText.erase(nStart, nEnd - nStart);
 
 			nRead = nStart;
 		}
