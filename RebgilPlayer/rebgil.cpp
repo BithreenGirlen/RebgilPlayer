@@ -95,7 +95,7 @@ namespace rebgil
 		}
 	};
 
-	static long long  FindAttribute(const std::vector<std::pair<std::string, std::string>>& attributes, const std::string& str)
+	static long long FindAttribute(const std::vector<std::pair<std::string, std::string>>& attributes, const std::string& str)
 	{
 		for (size_t i = 0; i < attributes.size(); ++i)
 		{
@@ -201,9 +201,7 @@ void rebgil::GetSpineList(const std::wstring& wstrFolderPath, std::vector<std::s
 		{
 			strShorterPaths.push_back(win_text::NarrowUtf8(filePath));
 		}
-
 	}
-
 }
 /*Spine素材フォルダ経路 => 台本ファイル経路*/
 std::wstring rebgil::DeriveScenarioFilePathFromSpineFolderPath(const std::wstring& wstrFolderPath)
@@ -227,8 +225,7 @@ std::wstring rebgil::DeriveScenarioFilePathFromSpineFolderPath(const std::wstrin
 	if (nPos == std::wstring::npos)return std::wstring();
 
 	std::wstring wstrScenarioPath = wstrFolderPath.substr(0, nPos) 
-		+ L"dialogxml\\jp\\" + wstrScenarioId 
-		+ L"\\dialog_show" + g_playerSetting.wstrSceneTextExtension;
+		+ L"dialogxml\\jp\\" + wstrScenarioId + L"\\dialog_show" + g_playerSetting.wstrSceneTextExtension;
 	return wstrScenarioPath;
 }
 /*台本ファイル読み取り*/
@@ -255,18 +252,7 @@ void rebgil::LoadScenario(const std::wstring& wstrFilePath, std::vector<adv::Tex
 		return;
 	}
 
-	const auto ExtractDirectory = [](const std::wstring& wstrFilePath)
-		-> std::wstring
-		{
-			size_t nPos = wstrFilePath.find_last_of(L"\\/");
-			if (nPos != std::wstring::npos)
-			{
-				return wstrFilePath.substr(0, nPos);
-			}
-			return wstrFilePath;
-		};
-
-	std::wstring wstrPlotFilePath = ExtractDirectory(wstrFilePath) + L"\\dialog_text" + g_playerSetting.wstrSceneTextExtension;
+	std::wstring wstrPlotFilePath = text_utility::ExtractDirectory(wstrFilePath) + L"\\dialog_text" + g_playerSetting.wstrSceneTextExtension;
 	strFile = win_filesystem::LoadFileAsString(wstrPlotFilePath.c_str());
 	if (strFile.empty())return;
 
@@ -360,20 +346,7 @@ std::vector<std::string> rebgil::GetLeaveOutListIfItWereIrregularScene(const std
 		{"2068_CG2", {"F_omako_4", "M_JJ_3", "M_JJ_4"}}
 	};
 
-	const auto ExtractFileName = [&atlasPath]()
-		-> std::string
-		{
-			std::vector<std::string> splits;
-			text_utility::SplitTextBySeparator(atlasPath, '\\', splits);
-			if (splits.empty())return atlasPath;
-
-			size_t nPos = splits[splits.size() - 1].find('.');
-			if (nPos == std::string::npos)return splits[splits.size() - 1];
-
-			return splits[splits.size() - 1].substr(0, nPos);
-		};
-
-	const auto fileName = ExtractFileName();
+	const auto fileName = text_utility::ExtractFileName(atlasPath);
 
 	const auto iter = irrergularMaskSlotMap.find(fileName);
 	if (iter != irrergularMaskSlotMap.cend())

@@ -217,7 +217,6 @@
     <ClCompile Include="sfml_spine_player.cpp" />
     <ClCompile Include="spine_loader.cpp" />
     <ClCompile Include="spine_player.cpp" />
-    <ClCompile Include="text_utility.cpp" />
     <ClCompile Include="win_dialogue.cpp" />
     <ClCompile Include="win_filesystem.cpp" />
     <ClCompile Include="win_text.cpp" />
