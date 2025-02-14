@@ -356,7 +356,9 @@ std::vector<std::string> rebgil::GetLeaveOutListIfItWereIrregularScene(const std
 		{"2022", {"Man_Dick_IN2", "Man_Dick_Out2", "Man_Dick_Shadow2", "Pussy_Close2", "Pussy_B2", "Pussy_F2"}},
 		{"2032_CG2", {"B_Pussy_1b2", "B_Pussy_2b", "B_Pussy_3b","MAN_dick2"}},
 		{"2042_CG2", {"B_pussy_3","MAN_Egg2", "MAN_dick2"}},
-		{"2049_CG2", {"Man_Dick_act1_tr2", "Man_Dick_act2-6", "Pussy_B2", "Pussy_Close_act2", "Pussy_Shadow_act2-6", "Pussy_F2"}}
+		{"2049_CG2", {"Man_Dick_act1_tr2", "Man_Dick_act2-6", "Pussy_B2", "Pussy_Close_act2", "Pussy_Shadow_act2-6", "Pussy_F2"}},
+		{"2057_CG2", {"M_dick2", "Pussy_3"}},
+		{"2068_CG2", {"F_omako_4", "M_JJ_3", "M_JJ_4"}}
 	};
 
 	const auto ExtractFileName = [&atlasPath]()
