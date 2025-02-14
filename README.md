@@ -1,6 +1,6 @@
 # RebgilPlayer
 
-某ゲームのアレの場面再生用。
+某寝室用。
 
 ## Runtime requirement
 
@@ -17,7 +17,7 @@ assets
   │  ├ ...
   │  ├ loaddata
   │  │  ├ ...
-  │  │  ├ hcg // scene spine folder
+  │  │  ├ hcg // Scene spine folder
   │  │  │  ├ ...
   │  │  │  ├ 203502
   │  │  │  │  ├ 2035_CG2.atlas.txt
@@ -26,18 +26,24 @@ assets
   │  │  │  │  ├ 2035_CG2_2.png
   │  │  │  │  ├ 2035_CG2_3.png
   │  │  │  │  └ ...
-  │  │  │  └ ...
+  │  │  │  ├ ...
+  │  │  │  └ jp
+  │  │  │    ├ ...
+  │  │  │    ├ 200701
+  │  │  │    │  ├ 2007_CG1.atlas.txt
+  │  │  │    │  └ ...
+  │  │  │    └ ...
   │  │  └ ...
   │  └ ...
   ├ ...
   ├ dialogvoice
   │  ├ ...
-  │  ├ 203562 // scene voice folder
+  │  ├ 203562 // Scene voice folder
   │  │  ├ 203562010.m4a
   │  │  ├ 203562014.m4a
   │  │  └ ...
   │  └ ...
-  ├ dialogxml // scene dialogue folder
+  ├ dialogxml // Scene dialogue folder
   │  └ jp
   │     ├ ...
   │     ├ 203562
@@ -47,12 +53,12 @@ assets
   └ ...
 </pre>
 
-Then, select any of spine folder in `assets\bundles\loaddata\hcg\` from the application.  
+Then, select `loaddata/hcg/XXXXXX`, or `loaddata/hcg/jp/XXXXXX` folder from the application.  
 The scene will be set up based on `dialog_show.txt` and `dialog_text.txt`.
 
 ## Mouse functions
 
-| Input  | Function  |
+| Input | Function |
 | --- | --- |
 | Mouse wheel | Scale up/down. Combinating with left `Ctrl` to retain window size. |
 | Left button + mouse wheel | Speed up/down the animation. |
@@ -64,7 +70,7 @@ The scene will be set up based on `dialog_show.txt` and `dialog_text.txt`.
 
 ## Keyboard functions
 
-| Input  | Function  |
+| Input | Function |
 | --- | --- |
 | A | Enable/disable premultiplied alpha. |
 | B | Prefer/ignore blend-mode specified by slots. |
@@ -73,9 +79,6 @@ The scene will be set up based on `dialog_show.txt` and `dialog_text.txt`.
 | Esc | Close the application. |
 | Up | Move on to the next folder. |
 | Down | Move on to the previous folder. |
-| PageUp | Speed up the audio playback rate. |
-| PageDown | Speed down the audio playback rate. |
-| Home | Reset the audio playback rate.|  
 
 - Some scenes require ignoring blend-mode specified by slots.
 
@@ -92,6 +95,6 @@ The following preferences can be configured through `setting.txt` in the same di
 
 ## Build
 
-1. Run `deps/CMakeLists.txt` to obtain the external libraries stated above. 
+1. Run `deps/CMakeLists.txt` to obtain the external libraries. 
 2. Open `RebgilPlayer.sln` with Visual Studio 2022.
 3. Select `Build Solution` on menu items.
