@@ -31,15 +31,15 @@ CSfmlSpineDrawer::CSfmlSpineDrawer(spine::SkeletonData* pSkeletonData, spine::An
 	/*sf::VertexArray seems not to have reserve-like method.*/
 	m_sfmlVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
 
-	skeleton = new(__FILE__, __LINE__) spine::Skeleton(pSkeletonData);
+	skeleton = new spine::Skeleton(pSkeletonData);
 
 	if (pAnimationStateData == nullptr)
 	{
-		pAnimationStateData = new(__FILE__, __LINE__) spine::AnimationStateData(pSkeletonData);
+		pAnimationStateData = new spine::AnimationStateData(pSkeletonData);
 		m_bHasOwnAnimationStateData = true;
 	}
 
-	animationState = new(__FILE__, __LINE__) spine::AnimationState(pAnimationStateData);
+	animationState = new spine::AnimationState(pAnimationStateData);
 
 	m_quadIndices.add(0);
 	m_quadIndices.add(1);
@@ -90,7 +90,7 @@ void CSfmlSpineDrawer::draw(sf::RenderTarget& renderTarget, sf::RenderStates ren
 		spine::Slot& slot = *skeleton->getDrawOrder()[i];
 		spine::Attachment* pAttachment = slot.getAttachment();
 
-		if (pAttachment == nullptr || ((slot.getColor().a == 0 || !slot.getBone().isActive()) && pAttachment->getRTTI().isExactly(spine::ClippingAttachment::rtti)))
+		if (pAttachment == nullptr || slot.getColor().a == 0 || !slot.getBone().isActive())
 		{
 			m_clipper.clipEnd(slot);
 			continue;
@@ -251,9 +251,9 @@ void CSfmlSpineDrawer::SetLeaveOutList(spine::Vector<spine::String>& list)
 bool CSfmlSpineDrawer::IsToBeLeftOut(const spine::String &slotName) const
 {
 	/*The comparison method depends on what should be excluded; the precise matching or just containing.*/
-	if (pLeaveOutCallback != nullptr)
+	if (m_pLeaveOutCallback != nullptr)
 	{
-		return pLeaveOutCallback(slotName.buffer(), slotName.length());
+		return m_pLeaveOutCallback(slotName.buffer(), slotName.length());
 	}
 	else
 	{

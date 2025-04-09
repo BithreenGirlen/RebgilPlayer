@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "sfml_spine.h"
+
 using FPoint2 = sf::Vector2f;
 using CSpineDrawable = CSfmlSpineDrawer;
 using CTextureLoader = CSfmlTextureLoader;
@@ -16,39 +17,46 @@ class CSpinePlayer
 {
 public:
 	CSpinePlayer();
-	~CSpinePlayer();
+	virtual ~CSpinePlayer();
 
 	bool SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary);
 	bool SetSpineFromMemory(const std::vector<std::string>& atlasData, const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelData, bool bIsBinary);
 
 	virtual void Redraw(float fDelta) = 0;
 
-	void RescaleSkeleton(bool bUpscale, bool bWindowToBeResized = true);
+	void RescaleSkeleton(bool bUpscale);
+	void RescaleCanvas(bool bUpscale);
 	void RescaleTime(bool bHasten);
+
 	void ResetScale();
 
 	void MoveViewPoint(int iX, int iY);
+
 	void ShiftAnimation();
 	void ShiftSkin();
 
-	void SwitchPma();
-	void SwitchBlendModeAdoption();
-	void SwitchDrawOrder();
+	void TogglePma();
+	void ToggleBlendModeAdoption();
+	void ToggleDrawOrder();
 
-	std::string GetCurrentAnimationNameWithTrackTime();
+	const char* GetCurrentAnimationNameWithTrackTime(float* fTrackTime = nullptr);
 
 	std::vector<std::string> GetSlotList();
-	std::vector<std::string> GetSkinList() const;
-	std::vector<std::string> GetAnimationList() const;
+	const std::vector<std::string>& GetSkinList() const;
+	const std::vector<std::string>& GetAnimationList() const;
 
 	void SetSlotsToExclude(const std::vector<std::string>& slotNames);
 	void MixSkins(const std::vector<std::string>& skinNames);
 	void MixAnimations(const std::vector<std::string>& animationNames);
 
 	void SetSlotExclusionCallback(bool (*pFunc)(const char*, size_t));
+
+	FPoint2 GetBaseSize() const;
+	float GetCanvasScale() const;
 protected:
+	static constexpr float kfScalePortion = 0.025f;
+	static constexpr float kfMinScale = 0.15f;
 	enum Constants { kBaseWidth = 1280, kBaseHeight = 720 };
-	const float m_kfScalePortion = 0.025f;
 
 	CTextureLoader m_textureLoader;
 	std::vector<std::unique_ptr<spine::Atlas>> m_atlases;
@@ -62,6 +70,7 @@ protected:
 
 	float m_fTimeScale = 1.f;
 	float m_fSkeletonScale = 1.f;
+	float m_fCanvasScale = 1.f;
 	FPoint2 m_fOffset{};
 	FPoint2 m_fViewOffset{};
 
@@ -78,15 +87,13 @@ protected:
 
 	void WorkOutDefualtSize();
 	virtual void WorkOutDefaultScale() = 0;
-	virtual void AdjustViewOffset() = 0;
 
 	void UpdatePosition();
 	void UpdateScaletonScale();
 	void UpdateTimeScale();
 
+	void UpdateAnimation();
 	void ClearAnimationTracks();
-
-	virtual void ResizeWindow() = 0;
 };
 
 #endif // !SPINE_PLAYER_H_

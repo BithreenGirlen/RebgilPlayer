@@ -20,11 +20,9 @@ public:
 
 	int Display();
 private:
-	std::wstring m_windowName;
-
 	std::unique_ptr<sf::RenderWindow> m_window;
 
-	CSfmlSpinePlayer m_sfmlSpinePlayer;
+	std::unique_ptr<CSfmlSpinePlayer> m_sfmlSpinePlayer;
 	sf::Clock m_spineClock;
 
 	bool SaveCurrentFrameImage();
@@ -44,7 +42,7 @@ private:
 
 	void Redraw();
 
-	void SwitchTextColor();
+	void ToggleTextColor();
 
 	void CheckTimer();
 	void ShiftMessageText(bool bForward);

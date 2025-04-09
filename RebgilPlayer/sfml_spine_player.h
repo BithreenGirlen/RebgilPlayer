@@ -6,18 +6,14 @@
 class CSfmlSpinePlayer : public CSpinePlayer
 {
 public:
-	CSfmlSpinePlayer();
+	CSfmlSpinePlayer(sf::RenderWindow* pSfmlWindow);
 	~CSfmlSpinePlayer();
-
-	void SetRenderWindow(sf::RenderWindow* pSfmlWindow);
 
 	virtual void Redraw(float fDelta);
 
-	sf::Vector2f GetBaseSize() const { return m_fBaseSize; }
+	void ResizeWindow();
 private:
 	virtual void WorkOutDefaultScale();
-	virtual void AdjustViewOffset();
-	virtual void ResizeWindow();
 
 	float m_fThresholdScale = 1.f;
 

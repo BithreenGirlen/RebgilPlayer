@@ -2,7 +2,8 @@
 
 #include "sfml_spine_player.h"
 
-CSfmlSpinePlayer::CSfmlSpinePlayer()
+CSfmlSpinePlayer::CSfmlSpinePlayer(sf::RenderWindow* pSfmlWindow)
+	:m_pSfmlWindow(pSfmlWindow)
 {
 
 }
@@ -12,10 +13,6 @@ CSfmlSpinePlayer::~CSfmlSpinePlayer()
 
 }
 
-void CSfmlSpinePlayer::SetRenderWindow(sf::RenderWindow* pSfmlWindow)
-{
-	m_pSfmlWindow = pSfmlWindow;
-}
 
 void CSfmlSpinePlayer::Redraw(float fDelta)
 {
@@ -25,24 +22,50 @@ void CSfmlSpinePlayer::Redraw(float fDelta)
 		{
 			for (size_t i = 0; i < m_drawables.size(); ++i)
 			{
-				m_drawables.at(i)->Update(fDelta);
-				m_pSfmlWindow->draw(*m_drawables.at(i).get(), sf::RenderStates(sf::BlendAlpha));
+				m_drawables[i]->Update(fDelta);
+				m_pSfmlWindow->draw(*m_drawables[i], sf::RenderStates(sf::BlendAlpha));
 			}
 		}
 		else
 		{
 			for(long long i = m_drawables.size() - 1;i >= 0;--i)
 			{
-				m_drawables.at(i)->Update(fDelta);
-				m_pSfmlWindow->draw(*m_drawables.at(i).get(), sf::RenderStates(sf::BlendAlpha));
+				m_drawables[i]->Update(fDelta);
+				m_pSfmlWindow->draw(*m_drawables[i], sf::RenderStates(sf::BlendAlpha));
 			}
 		}
 
 	}
 }
 
+void CSfmlSpinePlayer::ResizeWindow()
+{
+	if (m_pSfmlWindow == nullptr)return;
+	/* Keep sf::View unchanged. */
+#ifdef SFML_SPINE_CPP
+	float fOffset = m_fCanvasScale - m_fThresholdScale > 0.f ? m_fCanvasScale - m_fThresholdScale : 0;
+	for (const auto& drawable : m_drawables)
+	{
+		drawable->skeleton->setScaleX(m_fCanvasScale > 0.99f + fOffset ? m_fCanvasScale : 1.f + fOffset);
+		drawable->skeleton->setScaleY(m_fCanvasScale > 0.99f + fOffset ? m_fCanvasScale : 1.f + fOffset);
+	}
+
+	unsigned int uiWindowWidthMax = static_cast<unsigned int>(m_fBaseSize.x * (m_fCanvasScale - kfScalePortion));
+	unsigned int uiWindowHeightMax = static_cast<unsigned int>(m_fBaseSize.y * (m_fCanvasScale - kfScalePortion));
+	if (uiWindowWidthMax < sf::VideoMode::getDesktopMode().width || uiWindowHeightMax < sf::VideoMode::getDesktopMode().height)
+	{
+		m_pSfmlWindow->setSize(sf::Vector2u(static_cast<unsigned int>(m_fBaseSize.x * m_fCanvasScale), static_cast<unsigned int>(m_fBaseSize.y * m_fCanvasScale)));
+	}
+#elif SFML_SPINE_C
+	m_pSfmlWindow->setSize(sf::Vector2u(static_cast<unsigned int>(m_fBaseSize.x * m_fCanvasScale), static_cast<unsigned int>(m_fBaseSize.y * m_fCanvasScale)));
+#endif
+}
+/*標準尺度算出*/
 void CSfmlSpinePlayer::WorkOutDefaultScale()
 {
+	m_fDefaultScale = 1.f;
+	m_fDefaultOffset = sf::Vector2f();
+
 	unsigned int uiSkeletonWidth = static_cast<unsigned int>(m_fBaseSize.x);
 	unsigned int uiSkeletonHeight = static_cast<unsigned int>(m_fBaseSize.y);
 
@@ -51,46 +74,25 @@ void CSfmlSpinePlayer::WorkOutDefaultScale()
 
 	if (uiSkeletonWidth > uiDesktopWidth || uiSkeletonHeight > uiDesktopHeight)
 	{
+		float fScaleX = static_cast<float>(uiDesktopWidth) / uiSkeletonWidth;
+		float fScaleY = static_cast<float>(uiDesktopHeight) / uiSkeletonHeight;
+
 		if (uiDesktopWidth > uiDesktopHeight)
 		{
 			m_fDefaultScale = static_cast<float>(uiDesktopHeight) / uiSkeletonHeight;
 			m_fThresholdScale = static_cast<float>(uiDesktopWidth) / uiSkeletonWidth;
+
+			m_fDefaultOffset.x = uiSkeletonWidth > uiDesktopWidth ? (uiSkeletonWidth * (1 - fScaleY)) / 2.f : 0.f;
+			m_fDefaultOffset.y = uiSkeletonHeight > uiDesktopHeight ? (uiSkeletonHeight - uiDesktopHeight) / 2.f : 0.f;
 		}
 		else
 		{
 			m_fDefaultScale = static_cast<float>(uiDesktopWidth) / uiSkeletonWidth;
 			m_fThresholdScale = static_cast<float>(uiDesktopHeight) / uiSkeletonHeight;
+
+			m_fDefaultOffset.x = uiSkeletonWidth > uiDesktopWidth ? (uiSkeletonWidth - uiDesktopWidth) / 2.f : 0.f;
+			m_fDefaultOffset.y = uiSkeletonHeight > uiDesktopHeight ? (uiSkeletonHeight * (1 - fScaleX)) / 2.f : 0.f;
 		}
 		m_fSkeletonScale = m_fDefaultScale;
 	}
-}
-
-void CSfmlSpinePlayer::AdjustViewOffset()
-{
-	/*Nothing to do.*/
-}
-
-void CSfmlSpinePlayer::ResizeWindow()
-{
-	if (m_pSfmlWindow == nullptr)return;
-	/*Actually, these should be procedures for RescaleSkeleton()*/
-#ifdef SFML_SPINE_CPP
-	float fOffset = m_fSkeletonScale - m_fThresholdScale > 0.f ? m_fSkeletonScale - m_fThresholdScale : 0;
-	for (size_t i = 0; i < m_drawables.size(); ++i)
-	{
-		m_drawables.at(i).get()->skeleton->setScaleX(m_fSkeletonScale > 0.99f + fOffset ? m_fSkeletonScale : 1.f + fOffset);
-		m_drawables.at(i).get()->skeleton->setScaleY(m_fSkeletonScale > 0.99f + fOffset ? m_fSkeletonScale : 1.f + fOffset);
-	}
-
-	unsigned int uiWindowWidthMax = static_cast<unsigned int>(m_fBaseSize.x * (m_fSkeletonScale - m_kfScalePortion));
-	unsigned int uiWindowHeightMax = static_cast<unsigned int>(m_fBaseSize.y * (m_fSkeletonScale - m_kfScalePortion));
-	if (uiWindowWidthMax < sf::VideoMode::getDesktopMode().width || uiWindowHeightMax < sf::VideoMode::getDesktopMode().height)
-	{
-		m_pSfmlWindow->setSize(sf::Vector2u(static_cast<unsigned int>(m_fBaseSize.x * m_fSkeletonScale), static_cast<unsigned int>(m_fBaseSize.y * m_fSkeletonScale)));
-	}
-#elif SFML_SPINE_C
-
-#endif
-
-	m_pSfmlWindow->setSize(sf::Vector2u(static_cast<unsigned int>(m_fBaseSize.x * m_fSkeletonScale), static_cast<unsigned int>(m_fBaseSize.y * m_fSkeletonScale)));
 }
