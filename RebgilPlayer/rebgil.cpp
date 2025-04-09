@@ -13,11 +13,11 @@ namespace rebgil
 {
 	struct SPlayerSetting
 	{
-		std::wstring wstrAtlasExtension = L".atlas.txt";;
-		std::wstring wstrSkelExtension = L".skel.txt";;
-		std::wstring wstrVoiceExtension = L".m4a";;
-		std::wstring wstrSceneTextExtension = L".txt";;
-		std::string strFontFilePath = "C:\\Windows\\Fonts\\yumindb.ttf";;
+		std::wstring wstrAtlasExtension = L".atlas";
+		std::wstring wstrSkelExtension = L".skel";
+		std::wstring wstrVoiceExtension = L".m4a";
+		std::wstring wstrSceneTextExtension = L".xml";
+		std::string strFontFilePath = "C:\\Windows\\Fonts\\yumindb.ttf";
 
 		bool bToTranslateText = true;
 	};
@@ -224,8 +224,7 @@ std::wstring rebgil::DeriveScenarioFilePathFromSpineFolderPath(const std::wstrin
 	size_t nPos = wstrFolderPath.rfind(L"bundles");
 	if (nPos == std::wstring::npos)return std::wstring();
 
-	std::wstring wstrScenarioPath = wstrFolderPath.substr(0, nPos) 
-		+ L"dialogxml\\jp\\" + wstrScenarioId + L"\\dialog_show" + g_playerSetting.wstrSceneTextExtension;
+	std::wstring wstrScenarioPath = wstrFolderPath.substr(0, nPos) + L"dialogxml\\jp\\" + wstrScenarioId + L"\\dialog_show" + g_playerSetting.wstrSceneTextExtension;
 	return wstrScenarioPath;
 }
 /*台本ファイル読み取り*/
@@ -313,7 +312,7 @@ bool rebgil::IsSlotToBeLeftOut(const char* szSlotName, size_t nSlotNameLength)
 		{
 			const char* szSensitiveSlots[] =
 			{
-				"Anus", "Dick", "dick", "Egg", "egg", "Pussy", "pussy", "Toy", "JJ", "mako", "water"
+				"Anus", "Dick", "dick", "Egg", "egg", "Pussy", "pussy", "Toy", "JJ", "mako", "water", "Leg", "Hip"
 			};
 
 			for (size_t i = 0; i < sizeof(szSensitiveSlots) / sizeof(szSensitiveSlots[0]); ++i)
@@ -326,7 +325,7 @@ bool rebgil::IsSlotToBeLeftOut(const char* szSlotName, size_t nSlotNameLength)
 	const auto IsGeneralMask = [&szSlotName, &nSlotNameLength]()
 		-> bool
 		{
-			return strstr(szSlotName, "M/MM") != nullptr || strstr(szSlotName, "mmm") != nullptr;
+			return strstr(szSlotName, "mm") != nullptr || strstr(szSlotName, "MM") != nullptr;
 		};
 
 	return (IsMaskSlotCandidate() && IsSensitiveSlot()) || IsGeneralMask();
