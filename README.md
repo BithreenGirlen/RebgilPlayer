@@ -62,7 +62,6 @@ The scene will be set up based on `dialog_show.xml` and `dialog_text.xml`.
 | --- | --- |
 | Mouse wheel | Scale up/down. |
 | Left button + mouse wheel | Speed up/down the animation. |
-| Left button click | Play the next animation. |
 | Left button drag | Move view-point. |
 | Middle button | Reset scale, speed, and view-point to default. |
 | Right button + mouse wheel | Fast forward/rewind the text. |
@@ -72,8 +71,7 @@ The scene will be set up based on `dialog_show.xml` and `dialog_text.xml`.
 
 | Input | Function |
 | --- | --- |
-| <kbd>A</kbd> | Enable/disable premultiplied alpha. _Default: disabled_|
-| <kbd>B</kbd> | Prefer/ignore blend-mode specified by slots. _Default: ignored_|
+| <kbd>B</kbd> | Prefer/ignore blend-mode specified by slots. _Default: preferred_|
 | <kbd>C</kbd> | Toggle text colour between black and white. |
 | <kbd>T</kbd> | Show/hide text. |
 | <kbd>Esc</kbd> | Close the application. |
@@ -82,7 +80,7 @@ The scene will be set up based on `dialog_show.xml` and `dialog_text.xml`.
 | <kbd>＞</kbd> | Fast-forward the text. |
 | <kbd>＜</kbd> | Rewind the text. |
 
-- Some scenes require ignoring blend-mode specified by slots.
+- Some scenes require entering `B` key to force blend-mode `Normal` instead of `Multiply`.
 
 ## Scene preferences
 
