@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "sfml_spine.h"
-
 using FPoint2 = sf::Vector2f;
 using CSpineDrawable = CSfmlSpineDrawer;
 using CTextureLoader = CSfmlTextureLoader;
@@ -19,10 +18,14 @@ public:
 	CSpinePlayer();
 	virtual ~CSpinePlayer();
 
-	bool SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary);
-	bool SetSpineFromMemory(const std::vector<std::string>& atlasData, const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelData, bool bIsBinary);
+	bool LoadSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary);
+	bool LoadSpineFromMemory(const std::vector<std::string>& atlasData, const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelData, bool bIsBinary);
 
-	virtual void Redraw(float fDelta) = 0;
+	size_t GetNumberOfSpines() const;
+	bool HasSpineBeenLoaded() const;
+
+	virtual void Update(float fDelta);
+	virtual void Redraw() = 0;
 
 	void RescaleSkeleton(bool bUpscale);
 	void RescaleCanvas(bool bUpscale);
@@ -35,11 +38,21 @@ public:
 	void ShiftAnimation();
 	void ShiftSkin();
 
+	void SetAnimationByIndex(size_t nIndex);
+	void SetAnimationByName(const char* szAnimationName);
+	void RestartAnimation();
+
 	void TogglePma();
 	void ToggleBlendModeAdoption();
 	void ToggleDrawOrder();
 
-	const char* GetCurrentAnimationNameWithTrackTime(float* fTrackTime = nullptr);
+	const char* GetCurrentAnimationName();
+	/// @brief Get animation time actually entried in track.
+	/// @param fTrack elapsed time since the track was entried.
+	/// @param fLast current timeline position.
+	/// @param fStart timeline start position.
+	/// @param fEnd timeline end position.
+	void GetCurrentAnimationTime(float* fTrack, float* fLast, float* fStart, float* fEnd);
 
 	std::vector<std::string> GetSlotList();
 	const std::vector<std::string>& GetSkinList() const;
@@ -72,7 +85,6 @@ protected:
 	float m_fSkeletonScale = 1.f;
 	float m_fCanvasScale = 1.f;
 	FPoint2 m_fOffset{};
-	FPoint2 m_fViewOffset{};
 
 	bool m_bDrawOrderReversed = false;
 
@@ -85,14 +97,13 @@ protected:
 	void ClearDrawables();
 	bool SetupDrawer();
 
-	void WorkOutDefualtSize();
+	void WorkOutDefaultSize();
 	virtual void WorkOutDefaultScale() = 0;
+	virtual void WorkOutDefaultOffset() = 0;
 
 	void UpdatePosition();
-	void UpdateScaletonScale();
 	void UpdateTimeScale();
 
-	void UpdateAnimation();
 	void ClearAnimationTracks();
 };
 

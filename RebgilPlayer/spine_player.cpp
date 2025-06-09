@@ -13,7 +13,7 @@ CSpinePlayer::~CSpinePlayer()
 }
 
 /*ファイル取り込み*/
-bool CSpinePlayer::SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary)
+bool CSpinePlayer::LoadSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary)
 {
 	if (atlasPaths.size() != skelPaths.size())return false;
 	ClearDrawables();
@@ -37,13 +37,10 @@ bool CSpinePlayer::SetSpineFromFile(const std::vector<std::string>& atlasPaths, 
 
 	if (m_skeletonData.empty())return false;
 
-	WorkOutDefualtSize();
-	WorkOutDefaultScale();
-
 	return SetupDrawer();
 }
 /*メモリ取り込み*/
-bool CSpinePlayer::SetSpineFromMemory(const std::vector<std::string>& atlasData, const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelData, bool bIsBinary)
+bool CSpinePlayer::LoadSpineFromMemory(const std::vector<std::string>& atlasData, const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelData, bool bIsBinary)
 {
 	if (atlasData.size() != skelData.size() || atlasData.size() != atlasPaths.size())return false;
 	ClearDrawables();
@@ -58,8 +55,8 @@ bool CSpinePlayer::SetSpineFromMemory(const std::vector<std::string>& atlasData,
 		if (atlas.get() == nullptr)continue;
 
 		std::shared_ptr<spine::SkeletonData> skeletonData = bIsBinary ?
-			spine_loader::ReadBinarySkeletonFromMemory(strSkeletonData, atlas.get(), 1.f) :
-			spine_loader::ReadTextSkeletonFromMemory(strSkeletonData, atlas.get(), 1.f);
+			spine_loader::ReadBinarySkeletonFromMemory(reinterpret_cast<const unsigned char*>(strSkeletonData.data()), static_cast<int>(strSkeletonData.size()), atlas.get(), 1.f) :
+			spine_loader::ReadTextSkeletonFromMemory(strSkeletonData.data(), atlas.get(), 1.f);
 		if (skeletonData.get() == nullptr)return false;
 
 		m_atlases.push_back(std::move(atlas));
@@ -68,10 +65,25 @@ bool CSpinePlayer::SetSpineFromMemory(const std::vector<std::string>& atlasData,
 
 	if (m_skeletonData.empty())return false;
 
-	WorkOutDefualtSize();
-	WorkOutDefaultScale();
-
 	return SetupDrawer();
+}
+
+size_t CSpinePlayer::GetNumberOfSpines() const
+{
+	return m_drawables.size();
+}
+
+bool CSpinePlayer::HasSpineBeenLoaded() const
+{
+	return !m_drawables.empty();
+}
+/*状態更新*/
+void CSpinePlayer::Update(float fDelta)
+{
+	for (const auto& drawable : m_drawables)
+	{
+		drawable->Update(fDelta);
+	}
 }
 /*拡縮変更*/
 void CSpinePlayer::RescaleSkeleton(bool bUpscale)
@@ -85,7 +97,6 @@ void CSpinePlayer::RescaleSkeleton(bool bUpscale)
 		m_fSkeletonScale -= kfScalePortion;
 		if (m_fSkeletonScale < kfMinScale)m_fSkeletonScale = kfMinScale;
 	}
-	UpdateScaletonScale();
 }
 
 void CSpinePlayer::RescaleCanvas(bool bUpscale)
@@ -125,17 +136,15 @@ void CSpinePlayer::ResetScale()
 	m_fCanvasScale = m_fDefaultScale;
 
 	m_fOffset = m_fDefaultOffset;
-	m_fViewOffset = FPoint2{};
 
-	UpdateScaletonScale();
 	UpdateTimeScale();
 	UpdatePosition();
 }
 /*視点移動*/
 void CSpinePlayer::MoveViewPoint(int iX, int iY)
 {
-	m_fOffset.x += iX;
-	m_fOffset.y += iY;
+	m_fOffset.x += iX / m_fSkeletonScale;
+	m_fOffset.y += iY / m_fSkeletonScale;
 	UpdatePosition();
 }
 /*動作移行*/
@@ -145,7 +154,7 @@ void CSpinePlayer::ShiftAnimation()
 	if (m_nAnimationIndex >= m_animationNames.size())m_nAnimationIndex = 0;
 
 	ClearAnimationTracks();
-	UpdateAnimation();
+	RestartAnimation();
 }
 /*装い移行*/
 void CSpinePlayer::ShiftSkin()
@@ -164,6 +173,43 @@ void CSpinePlayer::ShiftSkin()
 		{
 			pDrawable->skeleton->setSkin(skin);
 			pDrawable->skeleton->setSlotsToSetupPose();
+		}
+	}
+}
+
+void CSpinePlayer::SetAnimationByIndex(size_t nIndex)
+{
+	if (nIndex < m_animationNames.size())
+	{
+		m_nAnimationIndex = nIndex;
+		RestartAnimation();
+	}
+}
+
+void CSpinePlayer::SetAnimationByName(const char* szAnimationName)
+{
+	if (szAnimationName != nullptr)
+	{
+		const auto& iter = std::find(m_animationNames.begin(), m_animationNames.end(), szAnimationName);
+		if (iter != m_animationNames.cend())
+		{
+			m_nAnimationIndex = std::distance(m_animationNames.begin(), iter);
+			RestartAnimation();
+		}
+	}
+}
+/*動作適用*/
+void CSpinePlayer::RestartAnimation()
+{
+	if (m_nAnimationIndex >= m_animationNames.size())return;
+	const char* szAnimationName = m_animationNames[m_nAnimationIndex].c_str();
+
+	for (const auto& pDrawable : m_drawables)
+	{
+		spine::Animation* pAnimation = pDrawable->skeleton->getData()->findAnimation(szAnimationName);
+		if (pAnimation != nullptr)
+		{
+			pDrawable->animationState->setAnimation(0, pAnimation->getName(), true);
 		}
 	}
 }
@@ -188,8 +234,8 @@ void CSpinePlayer::ToggleDrawOrder()
 {
 	m_bDrawOrderReversed ^= true;
 }
-/*現在の動作名と経過時間取得*/
-const char* CSpinePlayer::GetCurrentAnimationNameWithTrackTime(float* fTrackTime)
+
+const char* CSpinePlayer::GetCurrentAnimationName()
 {
 	for (const auto& pDrawable : m_drawables)
 	{
@@ -199,16 +245,33 @@ const char* CSpinePlayer::GetCurrentAnimationNameWithTrackTime(float* fTrackTime
 			spine::Animation* pAnimation = tracks[i]->getAnimation();
 			if (pAnimation != nullptr)
 			{
-				if (fTrackTime != nullptr)
-				{
-					*fTrackTime = tracks[i]->getTrackTime();
-				}
 				return pAnimation->getName().buffer();
 			}
 		}
 	}
 
 	return nullptr;
+}
+
+void CSpinePlayer::GetCurrentAnimationTime(float* fTrack, float* fLast, float* fStart, float* fEnd)
+{
+	for (const auto& pDrawable : m_drawables)
+	{
+		auto& tracks = pDrawable->animationState->getTracks();
+		for (size_t i = 0; i < tracks.size(); ++i)
+		{
+			spine::Animation* pAnimation = tracks[i]->getAnimation();
+			if (pAnimation != nullptr)
+			{
+				if (fTrack != nullptr)*fTrack = tracks[i]->getTrackTime();
+				if (fLast != nullptr)*fLast = tracks[i]->getAnimationLast();
+				if (fStart != nullptr)*fStart = tracks[i]->getAnimationStart();
+				if (fEnd != nullptr)*fEnd = tracks[i]->getAnimationEnd();
+
+				return;
+			}
+		}
+	}
 }
 /*槽溝名称引き渡し*/
 std::vector<std::string> CSpinePlayer::GetSlotList()
@@ -338,6 +401,9 @@ void CSpinePlayer::ClearDrawables()
 /*描画器設定*/
 bool CSpinePlayer::SetupDrawer()
 {
+	WorkOutDefaultSize();
+	WorkOutDefaultScale();
+
 	for (const auto& pSkeletonDatum : m_skeletonData)
 	{
 		auto pDrawable = std::make_shared<CSpineDrawable>(pSkeletonDatum.get());
@@ -372,14 +438,16 @@ bool CSpinePlayer::SetupDrawer()
 
 	}
 
-	UpdateAnimation();
+	WorkOutDefaultOffset();
+
+	RestartAnimation();
 
 	ResetScale();
 
 	return m_animationNames.size() > 0;
 }
 /*基準寸法・位置算出*/
-void CSpinePlayer::WorkOutDefualtSize()
+void CSpinePlayer::WorkOutDefaultSize()
 {
 	if (m_skeletonData.empty())return;
 
@@ -450,16 +518,7 @@ void CSpinePlayer::UpdatePosition()
 {
 	for (const auto& pDrawable : m_drawables)
 	{
-		pDrawable->skeleton->setPosition(m_fBaseSize.x / 2 - m_fOffset.x - m_fViewOffset.x, m_fBaseSize.y / 2 - m_fOffset.y - m_fViewOffset.y);
-	}
-}
-/*尺度適用*/
-void CSpinePlayer::UpdateScaletonScale()
-{
-	for (const auto& pDrawable : m_drawables)
-	{
-		pDrawable->skeleton->setScaleX(m_fSkeletonScale);
-		pDrawable->skeleton->setScaleY(m_fSkeletonScale);
+		pDrawable->skeleton->setPosition(m_fBaseSize.x / 2 - m_fOffset.x, m_fBaseSize.y / 2 - m_fOffset.y);
 	}
 }
 /*速度適用*/
@@ -468,21 +527,6 @@ void CSpinePlayer::UpdateTimeScale()
 	for (const auto& pDrawble : m_drawables)
 	{
 		pDrawble->timeScale = m_fTimeScale;
-	}
-}
-/*動作適用*/
-void CSpinePlayer::UpdateAnimation()
-{
-	if (m_nAnimationIndex >= m_animationNames.size())return;
-	const char* szAnimationName = m_animationNames[m_nAnimationIndex].c_str();
-
-	for (const auto& pDrawable : m_drawables)
-	{
-		spine::Animation* pAnimation = pDrawable->skeleton->getData()->findAnimation(szAnimationName);
-		if (pAnimation != nullptr)
-		{
-			pDrawable->animationState->setAnimation(0, pAnimation->getName(), true);
-		}
 	}
 }
 /*合成動作消去*/

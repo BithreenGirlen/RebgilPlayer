@@ -25,6 +25,8 @@ private:
 	std::unique_ptr<CSfmlSpinePlayer> m_sfmlSpinePlayer;
 	sf::Clock m_spineClock;
 
+	void ResizeWindow();
+
 	bool SaveCurrentFrameImage();
 
 	/*文章表示用*/

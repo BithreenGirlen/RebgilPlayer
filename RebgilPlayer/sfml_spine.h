@@ -25,10 +25,12 @@ public:
 
 	void SetLeaveOutList(spine::Vector<spine::String>& list);
 	void SetLeaveOutCallback(bool (*pFunc)(const char*, size_t)) { m_pLeaveOutCallback = pFunc; }
+
+	sf::FloatRect GetBoundingBox() const;
 private:
 	bool m_bHasOwnAnimationStateData = false;
-	bool m_bAlphaPremultiplied = false;
-	bool m_bForceBlendModeNormal = true;
+	mutable bool m_bAlphaPremultiplied = true;
+	bool m_bForceBlendModeNormal = false;
 
 	mutable spine::SkeletonClipping m_clipper;
 

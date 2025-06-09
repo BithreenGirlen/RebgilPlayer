@@ -4,7 +4,6 @@
 
 namespace spine
 {
-	/* When will this be deleted? */
 	SpineExtension* getDefaultExtension()
 	{
 		return new DefaultSpineExtension();
@@ -19,8 +18,8 @@ static sf::BlendMode g_sfmlBlendModeMultiply = sf::BlendMode
 	sf::BlendMode::Factor::DstColor,
 	sf::BlendMode::Factor::OneMinusSrcAlpha,
 	sf::BlendMode::Equation::Add,
-	sf::BlendMode::Factor::Zero,
 	sf::BlendMode::Factor::One,
+	sf::BlendMode::Factor::OneMinusSrcAlpha,
 	sf::BlendMode::Equation::Add
 );
 
@@ -130,11 +129,18 @@ void CSfmlSpineDrawer::draw(sf::RenderTarget& renderTarget, sf::RenderStates ren
 			pAttachmentUvs = &pRegionAttachment->getUVs();
 			pIndices = &m_quadIndices;
 
-			/*Fetch texture handle stored in AltasPage*/
+			/*Fetch texture stored in AltasPage*/
 #ifdef SPINE_4_1_OR_LATER
-			pSfmlTexture = (sf::Texture*)((spine::AtlasRegion*)pRegionAttachment->getRegion())->rendererObject;
+			spine::AtlasRegion* pAtlasRegion = static_cast<spine::AtlasRegion*>(pRegionAttachment->getRegion());
+
+			m_bAlphaPremultiplied = pAtlasRegion->page->pma;
+			pSfmlTexture = reinterpret_cast<sf::Texture*>(pAtlasRegion->rendererObject);
 #else
-			pSfmlTexture = (sf::Texture*)((spine::AtlasRegion*)pRegionAttachment->getRendererObject())->page->getRendererObject();
+			spine::AtlasRegion* pAtlasRegion = static_cast<spine::AtlasRegion*>(pRegionAttachment->getRendererObject());
+#ifdef SPINE_4_0
+			m_bAlphaPremultiplied = pAtlasRegion->page->pma;
+#endif
+			pSfmlTexture = reinterpret_cast<sf::Texture*>(pAtlasRegion->page->getRendererObject());
 #endif
 		}
 		else if (pAttachment->getRTTI().isExactly(spine::MeshAttachment::rtti))
@@ -153,11 +159,18 @@ void CSfmlSpineDrawer::draw(sf::RenderTarget& renderTarget, sf::RenderStates ren
 			pAttachmentUvs = &pMeshAttachment->getUVs();
 			pIndices = &pMeshAttachment->getTriangles();
 
-			/*Fetch texture handle stored in AltasPage*/
+			/*Fetch texture stored in AltasPage*/
 #ifdef SPINE_4_1_OR_LATER
-			pSfmlTexture = (sf::Texture*)((spine::AtlasRegion*)pMeshAttachment->getRegion())->rendererObject;
+			spine::AtlasRegion* pAtlasRegion = static_cast<spine::AtlasRegion*>(pMeshAttachment->getRegion());
+
+			m_bAlphaPremultiplied = pAtlasRegion->page->pma;
+			pSfmlTexture = reinterpret_cast<sf::Texture*>(pAtlasRegion->rendererObject);
 #else
-			pSfmlTexture = (sf::Texture*)((spine::AtlasRegion*)pMeshAttachment->getRendererObject())->page->getRendererObject();
+			spine::AtlasRegion* pAtlasRegion = static_cast<spine::AtlasRegion*>(pMeshAttachment->getRendererObject());
+#ifdef SPINE_4_0
+			m_bAlphaPremultiplied = pAtlasRegion->page->pma;
+#endif
+			pSfmlTexture = reinterpret_cast<sf::Texture*>(pAtlasRegion->page->getRendererObject());
 #endif
 		}
 		else if (pAttachment->getRTTI().isExactly(spine::ClippingAttachment::rtti))
@@ -191,7 +204,7 @@ void CSfmlSpineDrawer::draw(sf::RenderTarget& renderTarget, sf::RenderStates ren
 		/*
 		* The two tasks are required because SFML does not support indexed drawing.
 		* 1. Map index to vertex when adding.
-		* 2. Multiply alpha to colours if necessary. 
+		* 2. Multiply alpha to colours if necessary.
 		*/
 		for (int ii = 0; ii < pIndices->size(); ++ii)
 		{
@@ -248,7 +261,20 @@ void CSfmlSpineDrawer::SetLeaveOutList(spine::Vector<spine::String>& list)
 	}
 }
 
-bool CSfmlSpineDrawer::IsToBeLeftOut(const spine::String &slotName) const
+sf::FloatRect CSfmlSpineDrawer::GetBoundingBox() const
+{
+	sf::FloatRect boundingBox{};
+
+	if (skeleton != nullptr)
+	{
+		spine::Vector<float> tempVertices;
+		skeleton->getBounds(boundingBox.left, boundingBox.top, boundingBox.width, boundingBox.height, tempVertices);
+	}
+
+	return boundingBox;
+}
+
+bool CSfmlSpineDrawer::IsToBeLeftOut(const spine::String& slotName) const
 {
 	/*The comparison method depends on what should be excluded; the precise matching or just containing.*/
 	if (m_pLeaveOutCallback != nullptr)
@@ -266,7 +292,7 @@ bool CSfmlSpineDrawer::IsToBeLeftOut(const spine::String &slotName) const
 	return false;
 }
 
-void CSfmlTextureLoader::load(spine::AtlasPage& page, const spine::String& path)
+void CSfmlTextureLoader::load(spine::AtlasPage& atlasPage, const spine::String& path)
 {
 	sf::Texture* texture = new sf::Texture();
 	if (!texture->loadFromFile(path.buffer()))
@@ -275,25 +301,25 @@ void CSfmlTextureLoader::load(spine::AtlasPage& page, const spine::String& path)
 		return;
 	}
 
-	if (page.magFilter == spine::TextureFilter_Linear) texture->setSmooth(true);
-	if (page.uWrap == spine::TextureWrap_Repeat && page.vWrap == spine::TextureWrap_Repeat) texture->setRepeated(true);
+	if (atlasPage.magFilter == spine::TextureFilter_Linear) texture->setSmooth(true);
+	if (atlasPage.uWrap == spine::TextureWrap_Repeat && atlasPage.vWrap == spine::TextureWrap_Repeat) texture->setRepeated(true);
 
 	/*In case atlas size does not coincide with that of png, overwriting will collapse the layout.*/
-	if (page.width == 0 || page.height == 0)
+	if (atlasPage.width == 0 || atlasPage.height == 0)
 	{
 		sf::Vector2u size = texture->getSize();
-		page.width = size.x;
-		page.height = size.y;
+		atlasPage.width = size.x;
+		atlasPage.height = size.y;
 	}
 
 #ifdef SPINE_4_1_OR_LATER
-	page.texture = texture;
+	atlasPage.texture = texture;
 #else
-	page.setRendererObject(texture);
+	atlasPage.setRendererObject(texture);
 #endif
 }
 
 void CSfmlTextureLoader::unload(void* texture)
 {
-	delete (sf::Texture*)texture;
+	delete static_cast<sf::Texture*>(texture);
 }
