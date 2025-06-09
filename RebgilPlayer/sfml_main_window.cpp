@@ -17,9 +17,9 @@ CSfmlMainWindow::~CSfmlMainWindow()
 
 }
 
-bool CSfmlMainWindow::SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary)
+bool CSfmlMainWindow::SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool isBinarySkel)
 {
-	return m_sfmlSpinePlayer->LoadSpineFromFile(atlasPaths, skelPaths, bIsBinary);
+	return m_sfmlSpinePlayer->LoadSpineFromFile(atlasPaths, skelPaths, isBinarySkel);
 }
 
 void CSfmlMainWindow::SetSlotsToExclude(const std::vector<std::string>& slotNames)
@@ -36,10 +36,6 @@ int CSfmlMainWindow::Display()
 {
 	m_sfmlSpinePlayer->ResetScale();
 	ResizeWindow();
-
-	sf::Vector2f fWindowSize = m_sfmlSpinePlayer->GetBaseSize();
-	float fScale = m_sfmlSpinePlayer->GetCanvasScale();
-	m_window->setView(sf::View((fWindowSize * fScale) / 2.f, fWindowSize * fScale));
 
 	UpdateMessageText();
 
@@ -88,7 +84,7 @@ int CSfmlMainWindow::Display()
 					int iX = iMouseStartPos.x - event.mouseButton.x;
 					int iY = iMouseStartPos.y - event.mouseButton.y;
 
-					if (bLeftDowned && iX == 0 && iY == 0)
+					if (iX == 0 && iY == 0 && m_animationNames.empty())
 					{
 						m_sfmlSpinePlayer->ShiftAnimation();
 					}
@@ -140,12 +136,6 @@ int CSfmlMainWindow::Display()
 			case sf::Event::KeyPressed:
 				switch (event.key.code)
 				{
-				case sf::Keyboard::Key::PageUp:
-					ChangePlaybackRate(true);
-					break;
-				case sf::Keyboard::Key::PageDown:
-					ChangePlaybackRate(false);
-					break;
 				case sf::Keyboard::Key::Left:
 					ShiftMessageText(false);
 					break;
@@ -160,9 +150,6 @@ int CSfmlMainWindow::Display()
 			case sf::Event::KeyReleased:
 				switch (event.key.code)
 				{
-				case sf::Keyboard::Key::A:
-					m_sfmlSpinePlayer->TogglePma();
-					break;
 				case sf::Keyboard::Key::B:
 					m_sfmlSpinePlayer->ToggleBlendModeAdoption();
 					break;
@@ -176,13 +163,10 @@ int CSfmlMainWindow::Display()
 					SaveCurrentFrameImage();
 					break;
 				case sf::Keyboard::Key::T:
-					m_bTextHidden ^= true;
+					ToggleTextVisibility();
 					break;
 				case sf::Keyboard::Key::Escape:
 					m_window->close();
-					break;
-				case sf::Keyboard::Key::Home:
-					ResetPlacybackRate();
 					break;
 				case sf::Keyboard::Key::Up:
 					return 2;
@@ -192,12 +176,22 @@ int CSfmlMainWindow::Display()
 					break;
 				}
 				break;
-			default:
-				break;
 			}
 		}
 
-		Redraw();
+		float fDelta = m_spineClock.getElapsedTime().asSeconds();
+		m_sfmlSpinePlayer->Update(fDelta);
+		m_spineClock.restart();
+
+		m_window->clear(sf::Color(0, 0, 0, 0));
+
+		m_sfmlSpinePlayer->Redraw();
+		if (!m_bTextHidden)
+		{
+			m_window->draw(m_msgText);
+		}
+
+		m_window->display();
 
 		CheckTimer();
 
@@ -224,6 +218,8 @@ void CSfmlMainWindow::ResizeWindow()
 
 		m_window->setSize(sf::Vector2u(static_cast<unsigned int>(fBaseSize.x * fScale), static_cast<unsigned int>(fBaseSize.y * fScale)));
 		m_window->setView(sf::View((fBaseSize * fScale) / 2.f, fBaseSize * fScale));
+
+		AdjustTextBounds();
 	}
 }
 
@@ -249,7 +245,7 @@ bool CSfmlMainWindow::SaveCurrentFrameImage()
 
 	return bRet;
 }
-
+/*字体設定*/
 bool CSfmlMainWindow::SetFont(const std::string& strFilePath, bool bBold, bool bItalic)
 {
 	bool bRet = m_font.loadFromFile(strFilePath);
@@ -265,12 +261,15 @@ bool CSfmlMainWindow::SetFont(const std::string& strFilePath, bool bBold, bool b
 
 	return true;
 }
-/*文章格納*/
-void CSfmlMainWindow::SetTexts(const std::vector<adv::TextDatum>& textData)
+
+void CSfmlMainWindow::SetScenarioData(std::vector<adv::TextDatum>& textData, std::vector<std::string>& animationNames)
 {
-	m_textData = textData;
+	m_textData = std::move(textData);
+	m_animationNames = std::move(animationNames);
+
 	m_nTextIndex = 0;
 	m_msgText.setString("");
+	m_nLastAnimationIndex = 0;
 
 	const auto HasAudio = [](const adv::TextDatum& text)
 		-> bool
@@ -283,32 +282,16 @@ void CSfmlMainWindow::SetTexts(const std::vector<adv::TextDatum>& textData)
 		m_pAudioPlayer = std::make_unique<CMfMediaPlayer>();
 	}
 }
-/*再描画*/
-void CSfmlMainWindow::Redraw()
-{
-	float fDelta = m_spineClock.getElapsedTime().asSeconds();
-	m_sfmlSpinePlayer->Update(fDelta);
-	m_spineClock.restart();
-
-	if (m_window.get() != nullptr)
-	{
-		m_window->clear(sf::Color(0, 0, 0, 0));
-
-		m_sfmlSpinePlayer->Redraw();
-
-		if (!m_bTextHidden)
-		{
-			m_window->draw(m_msgText);
-		}
-
-		m_window->display();
-	}
-}
 /*文字色切り替え*/
 void CSfmlMainWindow::ToggleTextColor()
 {
 	m_msgText.setFillColor(m_msgText.getFillColor() == sf::Color::Black ? sf::Color::White : sf::Color::Black);
 	m_msgText.setOutlineColor(m_msgText.getFillColor() == sf::Color::Black ? sf::Color::White : sf::Color::Black);
+}
+
+void CSfmlMainWindow::ToggleTextVisibility()
+{
+	m_bTextHidden ^= true;
 }
 /*文章切り替え是否確認*/
 void CSfmlMainWindow::CheckTimer()
@@ -321,7 +304,10 @@ void CSfmlMainWindow::CheckTimer()
 		{
 			ShiftMessageText(true);
 		}
-		m_textClock.restart();
+		else
+		{
+			m_textClock.restart();
+		}
 	}
 }
 /*表示文章移行*/
@@ -344,12 +330,18 @@ void CSfmlMainWindow::UpdateMessageText()
 {
 	if (m_nTextIndex >= m_textData.size())return;
 
-	const adv::TextDatum& textDatum = m_textData[m_nTextIndex];
-	std::wstring wstr = textDatum.wstrText;
-	if (!wstr.empty() && wstr.back() != L'\n') wstr += L"\n ";
+	AdjustTextBounds();
 
-	wstr += std::to_wstring(m_nTextIndex + 1) + L"/" + std::to_wstring(m_textData.size());
-	m_msgText.setString(wstr);
+	const adv::TextDatum& textDatum = m_textData[m_nTextIndex];
+	/* Checks if animation has to be switched or not. */
+	if (m_nTextIndex == 0 || (m_nLastAnimationIndex != textDatum.nAnimationIndex))
+	{
+		if (textDatum.nAnimationIndex < m_animationNames.size())
+		{
+			m_nLastAnimationIndex = textDatum.nAnimationIndex;
+			m_sfmlSpinePlayer->SetAnimationByName(m_animationNames[m_nLastAnimationIndex].c_str());
+		}
+	}
 
 	if (!textDatum.wstrVoicePath.empty())
 	{
@@ -360,30 +352,31 @@ void CSfmlMainWindow::UpdateMessageText()
 	}
 	m_textClock.restart();
 }
-/*音声再生速度変更*/
-void CSfmlMainWindow::ChangePlaybackRate(bool bFaster)
-{
-	if (m_pAudioPlayer.get() != nullptr)
-	{
-		double dbRate = m_pAudioPlayer.get()->GetCurrentRate();
-		constexpr double fRatePortion = 0.1;
-		if (bFaster && dbRate < 2.49)
-		{
-			dbRate += fRatePortion;
-		}
-		else if (!bFaster && dbRate > 0.51)
-		{
-			dbRate -= fRatePortion;
 
-		}
-		m_pAudioPlayer.get()->SetCurrentRate(dbRate);
-	}
-}
-/*音声再生速度初期化*/
-void CSfmlMainWindow::ResetPlacybackRate()
+void CSfmlMainWindow::AdjustTextBounds()
 {
-	if (m_pAudioPlayer.get() != nullptr)
+	if (m_nTextIndex >= m_textData.size())return;
+
+	std::wstring wstr = m_textData[m_nTextIndex].wstrText;
+
+	const auto& windowSize = m_window->getSize();
+	size_t nCountsToBreak = windowSize.x / m_msgText.getCharacterSize();
+	for (size_t i = 0, nCount = 0; i < wstr.size(); ++i)
 	{
-		m_pAudioPlayer.get()->SetCurrentRate(1.0);
+		const auto& c = wstr[i];
+		if (c != '\n')
+		{
+			++nCount;
+			if (nCount >= nCountsToBreak)
+			{
+				wstr.insert(i, L"\n");
+				nCount = 0;
+			}
+		}
+		else nCount = 0;
 	}
+	if (!wstr.empty() && wstr.back() != L'\n') wstr += L"\n ";
+
+	wstr += std::to_wstring(m_nTextIndex + 1) + L"/" + std::to_wstring(m_textData.size());
+	m_msgText.setString(wstr);
 }

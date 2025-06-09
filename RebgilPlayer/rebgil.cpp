@@ -6,6 +6,7 @@
 
 #include "json_minimal.h"
 #include "text_utility.h"
+#include "path_utility.h"
 #include "win_filesystem.h"
 #include "win_text.h"
 
@@ -107,34 +108,63 @@ namespace rebgil
 		return -1;
 	}
 
-	static void LoadScenarioWithoutTranslating(const std::vector<std::string> plotTags, std::vector<adv::TextDatum>& textData, const std::wstring &wstrVoiceFolderPath)
+	struct CommandDatum
 	{
-		std::vector<std::pair<std::string, std::string>> attributes;
-		textData.reserve(plotTags.size());
-		for (const auto& plotTag : plotTags)
-		{
-			adv::TextDatum t;
+		std::string commandType;
+		std::unordered_map<std::string, std::string> parameters;
+	};
 
-			text_utility::GetXmlAttributes(plotTag, attributes);
+	static void ReadDialogueShowXml(const std::wstring &wstrDialogueFilePath, std::vector<CommandDatum> &commandData)
+	{
+		std::string strFile = win_filesystem::LoadFileAsString(wstrDialogueFilePath.c_str());
+		if (strFile.empty())return;
+
+		std::vector<std::string> tags;
+		text_utility::ToXmlTags(strFile, "dialog_show", tags);
+		for (const auto& tag : tags)
+		{
+			std::vector<std::pair<std::string, std::string>> attributes;
+			text_utility::GetXmlAttributes(tag, attributes);
 
 			long long llIndex = FindAttribute(attributes, "show_type");
-			if (llIndex == -1 || attributes[llIndex].second != "InsertDialog")
-			{
-				continue;
-			}
-
-			llIndex = FindAttribute(attributes, "parameter5");
 			if (llIndex == -1)continue;
 
-			t.wstrText = win_text::WidenUtf8(attributes[llIndex].second);
-			UnescapeXML(t.wstrText);
+			CommandDatum commandDatum;
+			commandDatum.commandType = attributes[llIndex].second;
 
-			llIndex = FindAttribute(attributes, "parameter6");
-			if (llIndex != -1)
+			for (const auto& attiribute : attributes)
 			{
-				t.wstrVoicePath = wstrVoiceFolderPath + win_text::WidenUtf8(attributes[llIndex].second) + g_playerSetting.wstrVoiceExtension;
+				if (attiribute != attributes[llIndex])
+				{
+					commandDatum.parameters.insert({ attiribute.first, attiribute.second });
+				}
 			}
-			textData.push_back(std::move(t));
+
+			commandData.push_back(std::move(commandDatum));
+		}
+	}
+
+	static void ReadDialogueTextXml(const std::wstring& wstrDialogueFilePath, std::unordered_map<std::string, std::string>& textMap)
+	{
+		std::string strFile = win_filesystem::LoadFileAsString(wstrDialogueFilePath.c_str());
+		if (strFile.empty())return;
+
+		std::vector<std::string> tags;
+		text_utility::ToXmlTags(strFile, "dialog_text", tags);
+		for (const auto& tag : tags)
+		{
+			std::vector<std::pair<std::string, std::string>> attributes;
+			text_utility::GetXmlAttributes(tag, attributes);
+
+			long long llIndex = FindAttribute(attributes, "id");
+			if (llIndex == -1)continue;
+			const std::string& id = attributes[llIndex].second;
+
+			llIndex = FindAttribute(attributes, "text");
+			if (llIndex == -1)continue;
+			const std::string &text = attributes[llIndex].second;
+
+			textMap.insert({ id, text });
 		}
 	}
 }
@@ -228,76 +258,102 @@ std::wstring rebgil::DeriveScenarioFilePathFromSpineFolderPath(const std::wstrin
 	return wstrScenarioPath;
 }
 /*台本ファイル読み取り*/
-void rebgil::LoadScenario(const std::wstring& wstrFilePath, std::vector<adv::TextDatum>& textData)
+void rebgil::LoadScenario(const std::wstring& wstrFilePath, std::vector<adv::TextDatum>& textData, std::vector<std::string>& animationNames)
 {
-	std::string strFile = win_filesystem::LoadFileAsString(wstrFilePath.c_str());
-	if (strFile.empty())return;
+	std::vector<CommandDatum> commandData;
+	ReadDialogueShowXml(wstrFilePath, commandData);
+	if (commandData.empty())return;
+
+	std::wstring wstrDialogueTextFilePath = path_utility::ExtractDirectory(wstrFilePath) + L"\\dialog_text" + g_playerSetting.wstrSceneTextExtension;
+	std::unordered_map<std::string, std::string> textMap;
+	if (g_playerSetting.bToTranslateText)
+	{
+		/* 翻訳文章と対応ID取得 */
+		ReadDialogueTextXml(wstrDialogueTextFilePath, textMap);
+		if (textMap.empty())return;
+	}
 
 	std::wstring wstrVoiceFolderPath = DeriveVoiceFolderPathFromScenarioFilePath(wstrFilePath);
 	if (wstrVoiceFolderPath.empty())return;
 
-	/*
-	* 1. "dialog_show.txt"から文章IDと音声ファイル経路を抜粋
-	* 2. "dialog_text.txt"から翻訳文章と対応ID取得
-	* 3. 翻訳文章と音声ファイルを結び付け
-	*/
-
-	std::vector<std::string> plotTags;
-	text_utility::ToXmlTags(strFile, "dialog_show", plotTags);
-
-	if (!g_playerSetting.bToTranslateText)
+	size_t nCurrentAnimationIndex = 0;
+	for (const auto& commandDatum : commandData)
 	{
-		LoadScenarioWithoutTranslating(plotTags, textData, wstrVoiceFolderPath);
-		return;
-	}
+		const auto& type = commandDatum.commandType;
+		const auto& params = commandDatum.parameters;
 
-	std::wstring wstrPlotFilePath = text_utility::ExtractDirectory(wstrFilePath) + L"\\dialog_text" + g_playerSetting.wstrSceneTextExtension;
-	strFile = win_filesystem::LoadFileAsString(wstrPlotFilePath.c_str());
-	if (strFile.empty())return;
-
-	std::vector<std::string> textTags;
-	text_utility::ToXmlTags(strFile, "dialog_text", textTags);
-
-	std::vector<std::pair<std::string, std::string>> attributes;
-
-	std::unordered_map<std::string, std::wstring> translatedTexts;
-	for (const auto& textTag : textTags)
-	{
-		text_utility::GetXmlAttributes(textTag, attributes);
-
-		long long llIndex = FindAttribute(attributes, "text");
-		if (llIndex == -1)continue;
-
-		std::wstring wstrText = win_text::WidenUtf8(attributes[llIndex].second);
-		UnescapeXML(wstrText);
-
-		llIndex = FindAttribute(attributes, "id");
-		if (llIndex == -1)continue;
-
-		translatedTexts.insert({ attributes[llIndex].second, wstrText });
-	}
-
-	textData.reserve(translatedTexts.size());
-	for (const auto& plotTag : plotTags)
-	{
-		text_utility::GetXmlAttributes(plotTag, attributes);
-
-		long long llIndex = FindAttribute(attributes, "parameter4");
-		if (llIndex == -1)continue;
-
-		const auto& iter = translatedTexts.find(attributes[llIndex].second);
-		if (iter == translatedTexts.cend())continue;
-
-		llIndex = FindAttribute(attributes, "parameter6");
-		
-		adv::TextDatum t;
-		t.wstrText = iter->second;
-		if (llIndex != -1)
+		/*
+		* ---------- The command-types in "dialog_show.xml" ----------
+		* - InsertDialog
+		*   - parameter1 : character name ID?
+		*   - parameter4 : text ID to be referred in "dialog_text.xml"
+		*   - parameter5 : text
+		*   - parameter6 : voice file name
+		*
+		* - InsertDynamicCG
+		*   - parameter1 : Spine folder name?
+		*   - parameter2 : Initial animation name
+		*
+		* - DynamicCGChangeAction
+		*   - parameter1 : Animation name to be set
+		*
+		* - InsertBackgroundVoice
+		*   - parameter1 : background voice file name
+		*   - parameter2 : BGV ID
+		*
+		* - InsertSound
+		*   - parameter1 : sound effect file name
+		*/
+		if (type == "InsertDialog")
 		{
-			t.wstrVoicePath = wstrVoiceFolderPath + win_text::WidenUtf8(attributes[llIndex].second) + g_playerSetting.wstrVoiceExtension;
+			adv::TextDatum t;
+			if (g_playerSetting.bToTranslateText)
+			{
+				const auto& iterId = params.find("parameter4");
+				if (iterId == params.cend())continue;
+
+				const auto& iterText = textMap.find(iterId->second);
+				if (iterText == textMap.cend())continue;
+
+				t.wstrText = win_text::WidenUtf8(iterText->second);
+			}
+			else
+			{
+				const auto& iterRawText = commandDatum.parameters.find("parameter5");
+				if (iterRawText == params.cend())continue;
+
+				t.wstrText = win_text::WidenUtf8(iterRawText->second);
+			}
+
+			const auto& iterVoice = params.find("parameter6");
+			if (iterVoice != params.cend())
+			{
+				t.wstrVoicePath = wstrVoiceFolderPath + win_text::WidenUtf8(iterVoice->second) + g_playerSetting.wstrVoiceExtension;
+			}
+
+			UnescapeXML(t.wstrText);
+			t.nAnimationIndex = nCurrentAnimationIndex;
+			textData.push_back(std::move(t));
 		}
-		textData.push_back(std::move(t));
+		else if (type == "DynamicCGChangeAction")
+		{
+			const auto& iter = params.find("parameter1");
+			if (iter == params.cend())continue;
+
+			animationNames.push_back(iter->second);
+			nCurrentAnimationIndex = animationNames.size() - 1;
+		}
+		else if (type == "InsertDynamicCG")
+		{
+			const auto& iter = params.find("parameter2");
+			if (iter == params.cend())continue;
+
+			animationNames.push_back(iter->second);
+			nCurrentAnimationIndex = animationNames.size() - 1;
+		}
 	}
+
+	return;
 }
 
 bool rebgil::IsSlotToBeLeftOut(const char* szSlotName, size_t nSlotNameLength)
@@ -345,9 +401,9 @@ std::vector<std::string> rebgil::GetLeaveOutListIfItWereIrregularScene(const std
 		{"2068_CG2", {"F_omako_4", "M_JJ_3", "M_JJ_4"}}
 	};
 
-	const auto fileName = text_utility::ExtractFileName(atlasPath);
+	const auto fileName = path_utility::ExtractFileName(atlasPath);
 
-	const auto iter = irrergularMaskSlotMap.find(fileName);
+	const auto& iter = irrergularMaskSlotMap.find(fileName);
 	if (iter != irrergularMaskSlotMap.cend())
 	{
 		return iter->second;

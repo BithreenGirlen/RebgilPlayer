@@ -38,8 +38,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	if (!rebgil::InitialiseSetting())return 0;
 
-	CSfmlMainWindow sSfmlMainWindow;
-	sSfmlMainWindow.SetFont(rebgil::GetFontFilePath());
+	CSfmlMainWindow sfmlMainWindow;
+	sfmlMainWindow.SetFont(rebgil::GetFontFilePath());
 
 	std::vector<std::wstring> folders;
 	size_t nFolderIndex = 0;
@@ -55,27 +55,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 		std::wstring wstrDialogueFilePath = rebgil::DeriveScenarioFilePathFromSpineFolderPath(wstrFolderPath);
 		std::vector<adv::TextDatum> textData;
-		rebgil::LoadScenario(wstrDialogueFilePath, textData);
+		std::vector<std::string> animationNames;
+		rebgil::LoadScenario(wstrDialogueFilePath, textData, animationNames);
 
-		/* Disable rendering multiple spines. */
+		/* Disable rendering multiple Spines. */
 		atlasPaths.resize(1);
 		skelPaths.resize(1);
-		bool bRet = sSfmlMainWindow.SetSpineFromFile(atlasPaths, skelPaths, rebgil::IsSkelBinary());
+		bool bRet = sfmlMainWindow.SetSpineFromFile(atlasPaths, skelPaths, rebgil::IsSkelBinary());
 		if (!bRet)break;
 
 		std::vector<std::string> slotsToExclude = rebgil::GetLeaveOutListIfItWereIrregularScene(atlasPaths[0]);
 		if (slotsToExclude.empty())
 		{
-			sSfmlMainWindow.SetSlotExclusionCallback(&rebgil::IsSlotToBeLeftOut);
+			sfmlMainWindow.SetSlotExclusionCallback(&rebgil::IsSlotToBeLeftOut);
 		}
 		else
 		{
-			sSfmlMainWindow.SetSlotsToExclude(slotsToExclude);
+			sfmlMainWindow.SetSlotsToExclude(slotsToExclude);
 		}
 
-		sSfmlMainWindow.SetTexts(textData);
+		sfmlMainWindow.SetScenarioData(textData, animationNames);
 
-		int iRet = sSfmlMainWindow.Display();
+		int iRet = sfmlMainWindow.Display();
 		if (iRet == 1)
 		{
 			++nFolderIndex;

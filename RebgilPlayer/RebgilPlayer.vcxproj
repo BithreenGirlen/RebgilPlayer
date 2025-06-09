@@ -134,6 +134,7 @@
     <ClInclude Include="adv.h" />
     <ClInclude Include="json_minimal.h" />
     <ClInclude Include="mf_media_player.h" />
+    <ClInclude Include="path_utility.h" />
     <ClInclude Include="rebgil.h" />
     <ClInclude Include="sfml_main_window.h" />
     <ClInclude Include="sfml_spine.h" />

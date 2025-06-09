@@ -4,17 +4,19 @@
 #include <memory>
 
 #include "sfml_spine_player.h"
+
+#include "adv.h"
 /* Microsoft Media Foundation is used because SFML does not provide functionality to play .m4a file. */
 #include "mf_media_player.h"
-#include "adv.h"
 
 class CSfmlMainWindow
 {
 public:
-	CSfmlMainWindow(const wchar_t *swzWindowName = nullptr);
+	CSfmlMainWindow(const wchar_t* swzWindowName = nullptr);
 	~CSfmlMainWindow();
 
-	bool SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool bIsBinary);
+	bool SetSpineFromFile(const std::vector<std::string>& atlasPaths, const std::vector<std::string>& skelPaths, bool isBinarySkel);
+
 	void SetSlotsToExclude(const std::vector<std::string>& slotNames);
 	void SetSlotExclusionCallback(bool (*pFunc)(const char*, size_t));
 
@@ -32,27 +34,28 @@ private:
 	/*文章表示用*/
 public:
 	bool SetFont(const std::string& strFilePath, bool bBold = true, bool bItalic = true);
-	void SetTexts(const std::vector<adv::TextDatum>& textData);
+	void SetScenarioData(std::vector<adv::TextDatum>& textData, std::vector<std::string>& animationNames);
 private:
 	sf::Font m_font;
 	sf::Text m_msgText;
 	sf::Clock m_textClock;
 
-	size_t m_nTextIndex = 0;
 	std::vector<adv::TextDatum> m_textData;
+	size_t m_nTextIndex = 0;
 	bool m_bTextHidden = false;
 
-	void Redraw();
+	std::vector<std::string> m_animationNames;
+	size_t m_nLastAnimationIndex = 0;
 
 	void ToggleTextColor();
+	void ToggleTextVisibility();
 
 	void CheckTimer();
 	void ShiftMessageText(bool bForward);
 	void UpdateMessageText();
+	void AdjustTextBounds();
 
 	std::unique_ptr<CMfMediaPlayer> m_pAudioPlayer;
-	void ChangePlaybackRate(bool bFaster);
-	void ResetPlacybackRate();
 };
 
 #endif // !SFML_MAIN_WINDOW_H_

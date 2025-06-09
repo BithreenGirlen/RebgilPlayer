@@ -60,6 +60,9 @@
     <ClInclude Include="mf_media_player.h">
       <Filter>Header File</Filter>
     </ClInclude>
+    <ClInclude Include="path_utility.h">
+      <Filter>Header File</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sfml_main_window.cpp">

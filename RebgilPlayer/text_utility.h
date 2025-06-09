@@ -96,6 +96,28 @@ namespace text_utility
 	}
 
 	template <typename CharType>
+	void EliminateRuby(std::basic_string<CharType>& src)
+	{
+		const CharType strRuby[] = { '<', 'r', 'u', 'b', 'y', '>', '\0' };
+
+		for (size_t nRead = 0;;)
+		{
+			size_t nPos = src.find(strRuby, nRead);
+			if (nPos == std::basic_string<CharType>::npos)break;
+
+			size_t nPos1 = src.find(CharType('|'), nPos);
+			if (nPos1 == std::basic_string<CharType>::npos)break;
+
+			size_t nPos2 = src.find(CharType('<'), nPos1);
+			if (nPos2 == std::basic_string<CharType>::npos)break;
+
+			size_t nLen = nPos2 - nPos1;
+			src.erase(nPos1, nLen);
+			nRead = nPos1;
+		}
+	}
+
+	template <typename CharType>
 	void ToXmlTags(const std::basic_string<CharType>& strText, const CharType* tagName, std::vector<std::basic_string<CharType>>& tags)
 	{
 		std::basic_string<CharType> strStart{ CharType('<') };
@@ -157,33 +179,6 @@ namespace text_utility
 			}
 		}
 	}
-
-	/* Utilities below are related path not so as to be text. */
-
-	template <typename CharType>
-	std::basic_string<CharType> ExtractDirectory(const std::basic_string<CharType>& filePath)
-	{
-		const CharType separators[] = { '\\', '/', '\0' };
-		size_t nPos = filePath.find_last_of(separators);
-		if (nPos != std::basic_string<CharType>::npos)
-		{
-			return filePath.substr(0, nPos);
-		}
-		return filePath;
-	}
-
-	template <typename CharType>
-	std::basic_string<CharType> ExtractFileName(const std::basic_string<CharType>& filePath)
-	{
-		const CharType separators[] = { '\\', '/', '\0' };
-		size_t nPos = filePath.find_last_of(separators);
-		nPos = nPos == std::basic_string<CharType>::npos ? 0 : nPos + 1;
-
-		size_t nPos2 = filePath.find(CharType('.'), nPos);
-		if (nPos2 == std::basic_string<CharType>::npos)nPos2 = filePath.size() - 1;
-
-		return filePath.substr(nPos, nPos2 - nPos);
-	}
-}
+} /* namespace text_utility */
 
 #endif // !TEXT_UTILITY_H_
